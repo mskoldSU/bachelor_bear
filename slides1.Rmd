@@ -1,0 +1,67 @@
+---
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(sf)
+```
+
+
+## Kommunikation
+
+- Veckovisa möten i grupp (bestäm tid)
+- Slack-kanal
+
+## Kandidatarbete
+
+- Lösa ett problem
+- Skriva en vetenskaplig uppsats
+  - Litteratursökning (t.ex. [Google Scholar](https://scholar.google.se/))
+  - Källhantering
+  
+## Björninventeringen
+
+```{r, echo = FALSE}
+map <- st_read("LanSweref99TM/Lan_Sweref99TM_region.shp", quiet = TRUE) %>% 
+  mutate(Inventering = case_when(LnKod == 25 ~ "2021",
+                                 LnKod %in% 22:23 ~ "2020",
+                                 LnKod == 24 ~ "2019",
+                                 LnKod %in% 20:21 ~ "2017"))
+map %>% ggplot() + geom_sf(aes(fill = Inventering)) + theme_void()
+```
+
+## Fynd per individ 2020
+
+```{r, echo = FALSE}
+captures <- read_csv("data/captures.csv") %>% 
+  filter(year == 2020)
+captures %>% count(id) %>% 
+  count(n) %>% 
+  ggplot(aes(x = n, y = nn)) + geom_col() + theme_bw() +
+  labs(x = "Antal återfynd", y = "Antal individer")
+```
+
+## Fynd per individ 2020
+
+```{r}
+xbar <- captures %>% count(id) %>% pull(n) %>% mean()
+n <- n_distinct(captures$id)
+lambda <- uniroot(f = function(lambda) lambda / (1-exp(-lambda)) - xbar, interval = c(0.01, 100))[["root"]]
+captures %>% count(id) %>% 
+  count(n) %>% 
+  ggplot(aes(x = n, y = nn)) + geom_col() + theme_bw() +
+  labs(x = "Antal återfynd", y = "Antal individer") +
+  geom_point(data = tibble(x = 0:40, y = dpois(x, lambda) * n), aes(x = x, y = y), color = "red", size = 2) +
+  xlim(c(0, 20))
+```
+
+## Positioner 2020
+
+```{r}
+map %>% filter(Inventering == "2020") %>% ggplot() + geom_sf() + geom_point(data = captures, aes(x = lon, y = lat), 
+                                                                            size = .5, alpha = .5) +
+  theme_void()
+```
+
